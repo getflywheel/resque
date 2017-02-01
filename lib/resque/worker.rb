@@ -16,6 +16,9 @@ module Resque
 
     WORKER_HEARTBEAT_KEY = "workers:heartbeat"
 
+    # Internal: Flag for whether we should skip worker membership checks
+    DISABLE_WORKER_MEMBERSHIP = true
+
     def redis
       Resque.redis
     end
@@ -108,6 +111,8 @@ module Resque
     # Given a string worker id, return a boolean indicating whether the
     # worker exists
     def self.exists?(worker_id)
+      return false if DISABLE_WORKER_MEMBERSHIP
+
       redis.sismember(:workers, worker_id)
     end
 
@@ -605,7 +610,7 @@ module Resque
     # lifecycle on startup.
     def register_worker
       redis.pipelined do
-        redis.sadd(:workers, self)
+        redis.sadd(:workers, self) unless DISABLE_WORKER_MEMBERSHIP
         started!
       end
     end
@@ -647,7 +652,7 @@ module Resque
       kill_background_threads
 
       redis.pipelined do
-        redis.srem(:workers, self)
+        redis.srem(:workers, self) unless DISABLE_WORKER_MEMBERSHIP
         redis.del("worker:#{self}")
         redis.del("worker:#{self}:started")
         redis.hdel(WORKER_HEARTBEAT_KEY, self.to_s)
