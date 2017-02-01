@@ -13,6 +13,9 @@ module Resque
     include Resque::Helpers
     include Resque::Logging
 
+    # Internal: Flag for whether we should skip worker membership checks
+    DISABLE_WORKER_MEMBERSHIP = true
+
     # Boolean indicating whether this worker can or can not fork.
     # Automatically set if a fork(2) fails.
     attr_accessor :cant_fork
@@ -79,6 +82,8 @@ module Resque
     # Given a string worker id, return a boolean indicating whether the
     # worker exists
     def self.exists?(worker_id)
+      return false if DISABLE_WORKER_MEMBERSHIP
+
       redis.sismember(:workers, worker_id)
     end
 
@@ -436,7 +441,7 @@ module Resque
     # Registers ourself as a worker. Useful when entering the worker
     # lifecycle on startup.
     def register_worker
-      redis.sadd(:workers, self)
+      redis.sadd(:workers, self) unless DISABLE_WORKER_MEMBERSHIP
       started!
     end
 
@@ -464,7 +469,7 @@ module Resque
         job.fail(exception || DirtyExit.new)
       end
 
-      redis.srem(:workers, self)
+      redis.srem(:workers, self) unless DISABLE_WORKER_MEMBERSHIP
       redis.del("worker:#{self}")
       redis.del("worker:#{self}:started")
 
