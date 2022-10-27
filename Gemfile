@@ -2,8 +2,6 @@ source "https://rubygems.org"
 
 gemspec
 
-gem "activesupport", "~> 3.0"
-gem "i18n"
 gem "json"
 gem "minitest", "4.7.0"
 gem "mocha", :require => false
